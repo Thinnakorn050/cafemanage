@@ -1,18 +1,17 @@
 <template>
     <v-container>
-
         <v-card-text class="font-weight-bold ml-n3 mt-n6" style="font-size: x-large;">
             <span>Add Products</span>
             <v-progress-linear color="brown-darken-2" class="mt-2" model-value="100" rounded />
         </v-card-text>
       
         <!-- Button to Open Add Product Form Dialog -->
-        <v-btn color="brown-darken-2" @click="openDialog" class="mb-4" icon variant="flat" rounded="xl" >
+        <v-btn color="brown-darken-2" @click="openDialog" class="mb-4" icon variant="flat" rounded="xl">
             <v-icon>mdi-plus</v-icon>
         </v-btn>
 
         <!-- Dialog for Adding New Product -->
-        <v-dialog v-model="dialog" max-width="500px" persistent> 
+        <v-dialog v-model="dialog" max-width="500px" persistent>
             <v-card elevation="0" rounded="xl">
                 <v-card-title class="mx-3 my-2">
                     <span>{{ isEdit ? 'Edit Product' : 'Add New Product' }}</span>
@@ -42,8 +41,7 @@
         <!-- List of Products -->
         <v-row>
             <v-col v-for="(product, index) in products" :key="index" cols="12" md="4" sm="6">
-                <v-card border="" >
-
+                <v-card border="">
                     <v-card-title>
                         <p class="font-weight-bold" style="font-size: x-large;">
                             {{ product.name }}
@@ -57,14 +55,27 @@
                     <v-card-actions class="mx-1 mb-2">
                         <v-spacer />
                         <v-btn color="blue" @click="editProduct(product)" variant="outlined" rounded class="custom-btn"> <v-icon>mdi-pencil</v-icon></v-btn>
-                        <v-btn color="red" @click="deleteProduct(product.id)" variant="outlined" rounded class="custom-btn"> <v-icon >mdi-delete</v-icon></v-btn>
+                        <v-btn color="red" @click="confirmDelete(product.id)" variant="outlined" rounded class="custom-btn"> <v-icon >mdi-delete</v-icon></v-btn>
                     </v-card-actions>
                 </v-card>
             </v-col>
         </v-row>
+
+        <!-- Confirmation Dialog for Delete -->
+        <v-dialog v-model="confirmDialog" max-width="400px">
+            <v-card>
+                <v-card-title class="headline">Are you sure?</v-card-title>
+                <v-card-text>
+                    <p>Do you want to delete this product?</p>
+                </v-card-text>
+                <v-card-actions>
+                    <v-btn text @click="closeConfirmDialog">Cancel</v-btn>
+                    <v-btn color="red" @click="executeDelete">Delete</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </v-container>
 </template>
-
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
@@ -96,6 +107,10 @@ const priceRules = [
     (v: number | '') => (v > 0 || v === '') || 'Price must be greater than 0',
 ];
 const descriptionRules = [(v: string) => v.length <= 200 || 'Description must be less than 200 characters'];
+
+// Confirmation dialog for delete
+const confirmDialog = ref(false);
+const productToDelete = ref<number | null>(null);
 
 // Function to open the dialog
 const openDialog = () => {
@@ -137,7 +152,6 @@ const addProduct = async () => {
         }
 
         alert('Product added successfully');
-        // Fetch the updated list of products after adding a new one
         await fetchProducts();
         closeDialog();
     } catch (error) {
@@ -199,10 +213,18 @@ const updateProduct = async () => {
     }
 };
 
-// Function to delete a product
-const deleteProduct = async (id: number) => {
+// Function to confirm delete
+const confirmDelete = (id: number) => {
+    productToDelete.value = id;
+    confirmDialog.value = true;
+};
+
+// Function to execute the delete action
+const executeDelete = async () => {
+    if (productToDelete.value === null) return;
+
     try {
-        const response = await fetch(`http://localhost:4000/api/menu/${id}`, {
+        const response = await fetch(`http://localhost:4000/api/menu/${productToDelete.value}`, {
             method: 'DELETE',
         });
 
@@ -212,9 +234,16 @@ const deleteProduct = async (id: number) => {
 
         alert('Product deleted successfully');
         await fetchProducts();
+        closeConfirmDialog();
     } catch (error) {
         console.error('Error deleting product:', error);
     }
+};
+
+// Function to close the confirm delete dialog
+const closeConfirmDialog = () => {
+    confirmDialog.value = false;
+    productToDelete.value = null;
 };
 
 // Fetch the products when the component is mounted
@@ -226,7 +255,6 @@ onMounted(() => {
 <style>
 .custom-btn {
   padding: 4px 8px;  /* Adjust the padding for button size */ /* Adjust font size if needed */
-  min-width: 2.5rem;   /* Minimum width for smaller buttons */
-  height: 4rem;      /* Button height */
+  min-width: 50px;
 }
 </style>

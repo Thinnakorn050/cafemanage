@@ -15,7 +15,8 @@ const orderController = {
 
         Order.getAllOrders(query, queryParams, (err, results) => {
             if (err) {
-                return res.status(500).send(err);
+                console.error('Error fetching orders:', err);
+                return res.status(500).json({ message: 'Error fetching orders' });
             }
             res.json(results);  // ส่งข้อมูลคำสั่งซื้อทั้งหมดหรือกรองตาม user_id
         });
@@ -23,18 +24,19 @@ const orderController = {
 
     // POST: สร้างคำสั่งซื้อใหม่
     createOrder: (req, res) => {
-        const { user_id, total_price } = req.body;
+        const { user_id, total_price, payment_status } = req.body;
 
         // ตรวจสอบว่า user_id และ total_price มีหรือไม่
-        if (!user_id || !total_price) {
-            return res.status(400).json({ message: 'user_id and total_price are required.' });
+        if (!user_id || !total_price || !payment_status) {
+            return res.status(400).json({ message: 'user_id, total_price, and payment_status are required.' });
         }
 
-        Order.createOrder(user_id, total_price, (err, results) => {
+        Order.createOrder(user_id, total_price, payment_status, (err, results) => {
             if (err) {
-                return res.status(500).send(err);
+                console.error('Error creating order:', err);
+                return res.status(500).json({ message: 'Error creating order' });
             }
-            res.status(201).json({ id: results.insertId, user_id, total_price });
+            res.status(201).json({ id: results.insertId, user_id, total_price, payment_status });
         });
     },
 
@@ -50,9 +52,15 @@ const orderController = {
 
         Order.updateOrder(id, total_price, payment_status, (err, results) => {
             if (err) {
-                return res.status(500).send(err);
+                console.error('Error updating order:', err);
+                return res.status(500).json({ message: 'Error updating order' });
             }
-            res.json({ message: 'Order updated successfully.' });
+
+            if (results.affectedRows > 0) {
+                res.json({ message: 'Order updated successfully.' });
+            } else {
+                res.status(404).json({ message: 'Order not found.' });
+            }
         });
     },
 
@@ -62,9 +70,15 @@ const orderController = {
 
         Order.deleteOrder(id, (err, results) => {
             if (err) {
-                return res.status(500).send(err);
+                console.error('Error deleting order:', err);
+                return res.status(500).json({ message: 'Error deleting order' });
             }
-            res.json({ message: 'Order deleted successfully.' });
+
+            if (results.affectedRows > 0) {
+                res.json({ message: 'Order deleted successfully.' });
+            } else {
+                res.status(404).json({ message: 'Order not found.' });
+            }
         });
     }
 };
