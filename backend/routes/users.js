@@ -5,17 +5,17 @@ const bcrypt = require('bcrypt');
 
 // GET all users
 router.get('/', (req, res) => {
-    db.query('SELECT id, name, role,email FROM users', (err, results) => {
+    db.query('SELECT id, username, role, email FROM users', (err, results) => {
         if (err) return res.status(500).send(err);
         res.json(results);
     });
 });
-// GET a user by ID or Email
+
+// GET a user by ID
 router.get('/:id', (req, res) => {
     const { id } = req.params;
 
-    // ค้นหาผู้ใช้ตาม id
-    db.query('SELECT id, name, role, email FROM users WHERE id = ?', [id], (err, results) => {
+    db.query('SELECT id, username, role, email FROM users WHERE id = ?', [id], (err, results) => {
         if (err) return res.status(500).send(err);
         if (results.length === 0) {
             return res.status(404).json({ error: "User not found" });
@@ -26,49 +26,43 @@ router.get('/:id', (req, res) => {
 
 // POST new user
 router.post('/', async (req, res) => {
-    const { name, password, role, email } = req.body; // ใช้ name แทน username
+    const { username, password, role, email } = req.body;
 
-    // ตรวจสอบข้อมูลที่รับมาว่ามีค่า
-    if (!name || !password || !role || !email) {
-        return res.status(400).json({ error: "Please provide name, password, role, and email." });
+    if (!username || !password || !role || !email) {
+        return res.status(400).json({ error: "Please provide username, password, role, and email." });
     }
 
-    // ตรวจสอบว่าอีเมลซ้ำไหม
     db.query('SELECT * FROM users WHERE email = ?', [email], async (err, results) => {
         if (err) return res.status(500).send(err);
         if (results.length > 0) {
             return res.status(400).json({ error: "Email already exists." });
         }
 
-        // ถ้าไม่มีอีเมลซ้ำ ทำการแฮชรหัสผ่านแล้วบันทึกข้อมูล
         const hashedPassword = await bcrypt.hash(password, 10);
-        db.query('INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)', [name, email, hashedPassword, role], (err, results) => {
+        db.query('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)', [username, email, hashedPassword, role], (err, results) => {
             if (err) return res.status(500).send(err);
-            res.status(201).json({ id: results.insertId, name, email, role });
+            res.status(201).json({ id: results.insertId, username, email, role });
         });
     });
 });
 
 // PUT update user
 router.put('/:id', (req, res) => {
-    const { name, email, role } = req.body; // รับค่าจาก req.body
-    const { id } = req.params; // รับค่า id จาก URL parameters
+    const { username, email, role } = req.body;
+    const { id } = req.params;
 
-    // ตรวจสอบว่ามีค่าทั้งหมดหรือไม่
-    if (!name || !email || !role) {
-        return res.status(400).json({ error: "Please provide name, email, and role." });
+    if (!username || !email || !role) {
+        return res.status(400).json({ error: "Please provide username, email, and role." });
     }
 
-    // ตรวจสอบว่าอีเมลซ้ำไหมสำหรับการอัพเดต
     db.query('SELECT * FROM users WHERE email = ? AND id != ?', [email, id], (err, results) => {
         if (err) return res.status(500).send(err);
         if (results.length > 0) {
             return res.status(400).json({ error: "Email already exists for another user." });
         }
 
-        // ดำเนินการอัพเดตข้อมูลในฐานข้อมูล
-        db.query('UPDATE users SET name = ?, email = ?, role = ? WHERE id = ?',
-            [name, email, role, id],
+        db.query('UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?',
+            [username, email, role, id],
             (err, results) => {
                 if (err) {
                     return res.status(500).json({ error: err.message });

@@ -1,86 +1,65 @@
 const Order = require('../models/orderModel');
 
-const orderController = {
-    // GET: ดึงข้อมูลคำสั่งซื้อทั้งหมด (หรือกรองตาม user_id)
-    getAllOrders: (req, res) => {
-        const userId = req.query.user_id;  // ดึงค่าจาก query params เช่น /orders?user_id=123
-        let query = 'SELECT * FROM orders';
-        let queryParams = [];
-
-        // หากมี user_id จะเพิ่มเงื่อนไขการกรอง
-        if (userId) {
-            query += ' WHERE user_id = ?';
-            queryParams.push(userId);
-        }
-
-        Order.getAllOrders(query, queryParams, (err, results) => {
-            if (err) {
-                console.error('Error fetching orders:', err);
-                return res.status(500).json({ message: 'Error fetching orders' });
-            }
-            res.json(results);  // ส่งข้อมูลคำสั่งซื้อทั้งหมดหรือกรองตาม user_id
-        });
-    },
-
-    // POST: สร้างคำสั่งซื้อใหม่
-    createOrder: (req, res) => {
-        const { user_id, total_price, payment_status } = req.body;
-
-        // ตรวจสอบว่า user_id และ total_price มีหรือไม่
-        if (!user_id || !total_price || !payment_status) {
-            return res.status(400).json({ message: 'user_id, total_price, and payment_status are required.' });
-        }
-
-        Order.createOrder(user_id, total_price, payment_status, (err, results) => {
-            if (err) {
-                console.error('Error creating order:', err);
-                return res.status(500).json({ message: 'Error creating order' });
-            }
-            res.status(201).json({ id: results.insertId, user_id, total_price, payment_status });
-        });
-    },
-
-    // PUT: อัปเดตคำสั่งซื้อ
-    updateOrder: (req, res) => {
-        const { id } = req.params;
-        const { total_price, payment_status } = req.body;
-
-        // ตรวจสอบว่า total_price และ payment_status มีหรือไม่
-        if (!total_price || !payment_status) {
-            return res.status(400).json({ message: 'total_price and payment_status are required.' });
-        }
-
-        Order.updateOrder(id, total_price, payment_status, (err, results) => {
-            if (err) {
-                console.error('Error updating order:', err);
-                return res.status(500).json({ message: 'Error updating order' });
-            }
-
-            if (results.affectedRows > 0) {
-                res.json({ message: 'Order updated successfully.' });
-            } else {
-                res.status(404).json({ message: 'Order not found.' });
-            }
-        });
-    },
-
-    // DELETE: ลบคำสั่งซื้อ
-    deleteOrder: (req, res) => {
-        const { id } = req.params;
-
-        Order.deleteOrder(id, (err, results) => {
-            if (err) {
-                console.error('Error deleting order:', err);
-                return res.status(500).json({ message: 'Error deleting order' });
-            }
-
-            if (results.affectedRows > 0) {
-                res.json({ message: 'Order deleted successfully.' });
-            } else {
-                res.status(404).json({ message: 'Order not found.' });
-            }
-        });
+// ดึงข้อมูลคำสั่งซื้อทั้งหมด
+exports.getAllOrders = async (req, res) => {
+    try {
+        const orders = await Order.getAllOrders(); // เปลี่ยนชื่อฟังก์ชัน
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 };
 
-module.exports = orderController;
+// ดึงข้อมูลคำสั่งซื้อโดยใช้ id
+exports.getOrderById = async (req, res) => {
+    const id = req.params.id;
+    try {
+        const order = await Order.getOrderById(id); // เปลี่ยนชื่อฟังก์ชัน
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        res.json(order);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// สร้างคำสั่งซื้อใหม่
+exports.createOrder = async (req, res) => {
+    const { user_id, menu_items } = req.body;
+    try {
+        const result = await Order.createOrder(user_id, menu_items); // เปลี่ยนชื่อฟังก์ชัน
+        res.status(201).json({ message: 'Order created', orderId: result.orderId });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// อัปเดตคำสั่งซื้อ
+exports.updateOrder = async (req, res) => {
+    const id = req.params.id;
+    const { payment_status } = req.body; // เปลี่ยนชื่อฟิลด์
+    try {
+        const result = await Order.updateOrder(id, payment_status); // เปลี่ยนชื่อฟังก์ชัน
+        if (!result) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        res.json({ message: 'Order updated' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// ลบคำสั่งซื้อ
+exports.deleteOrder = async (req, res) => {
+    const id = req.params.id;
+    try {
+        const result = await Order.deleteOrder(id); // เปลี่ยนชื่อฟังก์ชัน
+        if (!result) {
+            return res.status(404).json({ message: 'Order not found' });
+        }
+        res.json({ message: 'Order deleted' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};

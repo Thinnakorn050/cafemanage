@@ -11,7 +11,7 @@ router.get('/:id', (req, res) => {
             menu_items.id AS menu_item_id,
             menu_items.name AS menu_name,
             menu_items.price AS menu_price,
-            order_items.quantity
+            order_items.quantity AS quantity
         FROM 
             order_items
         JOIN 
@@ -21,14 +21,10 @@ router.get('/:id', (req, res) => {
     `;
 
     db.query(query, [id], (err, results) => {
-        if (err) {
-            return res.status(500).send(err);
-        }
-
+        if (err) return res.status(500).send(err);
         if (results.length === 0) {
             return res.status(404).json({ error: "ไม่พบรายการสินค้าที่มี id นี้" });
         }
-
         res.json(results);
     });
 });
